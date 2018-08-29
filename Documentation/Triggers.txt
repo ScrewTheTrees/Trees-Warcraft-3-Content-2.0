@@ -1,0 +1,25 @@
+If 2 actions are added to a trigger it will run them in the order they are added.
+The 2nd triggeraction will not trigger until the next one, If the first trigger has a "TriggerSleepAction()", the next triggeraction will wait for it to finish.
+
+
+
+Example:
+
+
+function Trig_Untitled_Trigger_003_Actions takes nothing returns nothing
+    call BJDebugMsg("Done")
+endfunction
+
+
+function Trig_Untitled_Trigger_002_Actions takes nothing returns nothing
+	call BJDebugMsg("Start")
+    call TriggerSleepAction( 10.00 )
+endfunction
+
+//===========================================================================
+function InitTrig_Untitled_Trigger_002 takes nothing returns nothing
+    set gg_trg_Untitled_Trigger_002 = CreateTrigger(  )
+    call TriggerAddAction( gg_trg_Untitled_Trigger_002, function Trig_Untitled_Trigger_002_Actions )
+    call TriggerAddAction( gg_trg_Untitled_Trigger_002, function Trig_Untitled_Trigger_003_Actions )
+endfunction
+
