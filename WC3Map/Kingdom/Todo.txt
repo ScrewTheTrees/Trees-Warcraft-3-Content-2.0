@@ -1,0 +1,40 @@
+
+udg_AIUnitData
+	Unit Handle ID
+		1) integer AI state
+		
+		10) real Return Distance
+		11) real Return Timer
+		
+		100) boolean HoldPosition
+		101) rect GuardPosition
+
+		200) boolean IsCaptain
+		201) group EscortGroup(Follows captain) //Nullable
+	
+	---------
+	AI states
+		0) Disabled
+		1) Guarding
+		2) Patrolling
+		3) Heading to guard position
+		4) Assaulting
+		
+	
+
+	
+udg_AIBreadcrumbPaths
+	Custom Path ID
+		1) integer number of rects
+		
+		100...) Rects
+		
+	
+	
+1) Keep counter on dead units that need replacement.
+2) Make production produce said units.
+3) Assemble into a max 12 unit group.
+4) Have group head down a trail of rects together.
+5) Split group depending on where they are heading.
+6) Unit reaches destination rect
+7) Tell unit to move to its GuardPosition

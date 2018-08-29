@@ -1,0 +1,116 @@
+//Anything without a () infront of it is a 4byte int.
+
+CUnit
+	+4		(bitfield)Unit flags 
+	+30		(String 4)Unit String (Backwards)
+	+50		Every time this unit is selected this updates, When unit is out of view its empty. It cycles adresses depending on what units is in view.
+	+5C		Moving state?
+	+84		(Pointer)OnHit Pointer to self
+	+88		(Pointer)OnHit Pointer To ???
+	+B0		(Float)Base Health Regen
+	+D4		(Float)Base Mana Regen
+	+E0		(Float)Armor
+	+E4		Armor Type
+	+1DC	Additional Abilities
+	+1E0	Additional Abilities
+	+1E8	(Pointer)CAbility* AttackAbility
+	+1EC	(Pointer)CAbility* MoveAbility
+	+1F0	(Pointer)CAbility* HeroAbility
+	+1F4	(Pointer)CAbility* BuildAbility
+	+1F8	(Pointer)CAbility* InventoryAbility
+	+284 	(Float)Position X
+	+288	(Float)Position Y
+	+28C	(Float)Position Z
+	+290	(Float) Rotation (Both)
+	+294	(Float) Rotation X (Sin/Cos)
+	+298	(Float) Rotation Y (Sin/Cos)
+	+2A0	(Float) Rotation Y (Inverted)
+	
+Armor Types:
+	0 = Light
+	1 = Medium
+	2 = Heavy
+	3 = Fortified
+	4 = Normal
+	5 = Hero
+	6 = Divine
+	7 = Unarmored
+	
+//Note: The 2 between fields might be array sizes.
+AttackAbility:
+	+88		ATK1 Number Of Dice
+	+8C		ATK2 Number Of Dice
+	+94		ATK1 Sides Per Die
+	+98		ATK2 Sides Per Die
+	+A0		ATK1 Base Damage
+	+B4		ATK1 Base Damage
+	+AC		ATK1 Bonus Damage
+	+B0		ATK2 Bonus Damage
+	+158	(Float)ATK1 Cooldown Time
+	+160	(Float)ATK2 Cooldown Time
+	+16C	(Float)ATK1 Animation Damage Point
+	+17C	(Float)ATK1 Animation Backswing Point
+	+190	(Float)ATK2 Animation Damage Point
+	+1A0	(Float)ATK2 Animation Backswing Point
+	+218	(Bitfield)ATK1 Targets Allowed
+	+21C	(Bitfield)ATK2 Targets Allowed
+	+238	(Pointer)ATK1 AOE Damage
+	+23C	(Pointer)ATK2 AOE Damage
+	+244	(Float)Aquisition Range
+	+258	(Float)ATK1 Range
+	+260	(Float)ATK2 Range
+	+26C	(Float)ATK1 Range Motion Buffert
+	+274	(Float)ATK2 Range Motion Buffert
+	
+	
+AOE Damage Struct:
+	+28		(Float)Area Of Effect (Full Damage)
+	+30		(Float)Area Of Effect (Medium Damage)
+	+38		(Float)Area Of Effect (Small Damage)
+	+40		(Float)Damage Factor (Medium)
+	+48		(Float)Damage Factor (Small)
+	
+	
+	
+AbilityMove:
+	+04		(Bitfield)Moving State?
+	+70		(Float)Movement Speed Base
+	
+
+AbilityInventory
+	+70		Inventory Slot 1
+	+74		Inventory Slot 1
+	+7C		Inventory Slot 2
+	+80		Inventory Slot 2
+	+88		Inventory Slot 3
+	+8C		Inventory Slot 3
+	+94		Inventory Slot 4
+	+98		Inventory Slot 4
+	+A0		Inventory Slot 5
+	+A4		Inventory Slot 5
+	+AC		Inventory Slot 6
+	+B0		Inventory Slot 6
+	
+
+HeroAbility:
+	+34		(String 4) Hero Ability String
+	+8C		XP
+	+90		Skill Allocation Points Left
+	+94		Starting Strength
+	+9C		(Float)Attribute Value Of Primary Attribute
+	+A4		(Float)Extra Health (Read Only)
+	+A8		Starting Agility
+	+B0		(Float)Armor
+	+C8		(Float)Max Mana (Read Only)
+	+CC		Primary Attribute
+	+D4		(Float)Strength Per Level
+	+DC		(Float)Intelligence Per Level
+	+E4		(Float)Agility Per Level
+	+138	Portrait Location ID (Read Only)
+	
+	
+Primary Attribute:
+	1 = Strength
+	2 = Intelligence
+	3 = Agility
+

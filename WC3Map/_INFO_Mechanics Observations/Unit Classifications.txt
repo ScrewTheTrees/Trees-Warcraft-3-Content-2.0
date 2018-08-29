@@ -1,0 +1,23 @@
+"Town Hall"
+	Causes the players units to be shown to other players if all of this type of buildings is dead. (Melee only), supposedly.
+	Causes this unit to show up in the "Town Hall" in the AI editor section.
+
+"Worker"
+	The unit wont attack on it's own and is gonna run away instead.
+	Causes the unit to show up in the "Worker" Section of the editor.
+
+"Sucidal"
+	Used for spells that cannot target sucidals (such as invisibility)
+	
+"Ward"
+	Does not display Move/Patrol etc... in command card.
+	
+"Tauren"
+	For spells that targets tauren only (The revive tauren spell.)
+	
+"Mechanical"
+	Mainly used for repair and abilities targeting.
+	
+"Walkable"
+	Supposedly it makes you able to walk through this unit, does not work for buildings.
+	

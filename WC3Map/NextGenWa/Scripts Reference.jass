@@ -1,0 +1,20 @@
+function IsRadiusFreeFromUnit takes integer UnitType, location Position, real Radius returns boolean
+
+function IsRadiusFreeFromNeutralBuilding takes location Position, real Radius returns boolean
+
+function IsRadiusFreeFromNeutralUnits takes location Position, real Radius returns boolean
+
+function GenerateTreeCluster takes integer Destructable, location Position, integer Size returns nothing
+
+function GenerateNeutralPassiveUnitCluster takes location loc, integer size, integer Unit returns nothing
+
+function AddAngle takes real Angle, real add returns real
+
+function CanBuildHere takes real CenterX,real CenterY,integer checkUnit returns boolean
+
+function CanPlaceBetween takes location startLoc, location endLoc , integer checkUnit, real checkDistance returns boolean
+
+
+function GetRandomBiome takes nothing returns integer
+
+function GetTreeFromBiome takes integer switch returns integer

@@ -1,0 +1,193 @@
+function AI_UnitGuarding takes unit u returns nothing
+    local integer unitid = GetHandleId(u)
+    local location currentLocation = GetUnitLoc(u)
+    local boolean holdPosition = LoadBoolean(udg_AIUnitData, GetHandleId(u), 200)
+    local location guardLocation = GetRectCenter(LoadRectHandle(udg_AIUnitData, GetHandleId(u), 201))
+    local real returnRange = LoadReal(udg_AIUnitData, GetHandleId(u), 202)
+    local real attackTimer = LoadReal(udg_AIUnitData, GetHandleId(u), 203)
+    
+    if (DistanceBetweenPoints(currentLocation, guardLocation) > GetUnitCollisionSize(u) * 2) then
+        if (attackTimer <= 0) then
+                call IssuePointOrderLoc(u, "attack", guardLocation)
+        endif
+        
+    else //We are standing at our wanted guardlocation
+        if (holdPosition == true) then
+            call IssueImmediateOrder(u, "holdposition")
+        else
+            call IssueImmediateOrder(u, "stop")
+        endif
+    endif
+    
+    set currentLocation = null
+    set guardLocation = null
+endfunction
+
+function AI_UnitPatrol takes unit u returns nothing
+    
+endfunction
+
+function AI_UnitHeadToGuard takes unit u returns nothing
+    
+endfunction
+
+function AI_UnitAssulting takes unit u returns nothing
+    
+endfunction
+
+
+
+
+function AI_ExecuteUnitLogic takes unit u returns nothing
+    local integer unitid = GetHandleId(u)
+    local integer AIState = LoadInteger(udg_AIUnitData, GetHandleId(u), 1)
+    
+    if (AIState == 1) then //Guarding
+        call AI_UnitGuarding(u)
+    elseif (AIState == 2) then //Patrolling
+        call AI_UnitPatrol(u)
+    elseif (AIState == 3) then //Heading to guard position
+        call AI_UnitHeadToGuard(u)
+    elseif (AIState == 4) then //Assulting
+        call AI_UnitAssulting(u)
+    else //Anything else
+        
+    endif
+endfunction
+
+
+
+
+
+
+//===========================================================================
+//===========================================================================
+//===========================================================================
+//Execute logic
+function Trig_AIExecuteLogic_Actions takes nothing returns nothing
+    local real t = 0
+    local unit u = FirstOfGroup(udg_AIUnitGroupI)
+    local group g = CreateGroup()
+    local unit u2
+    call GroupAddGroup(udg_AIUnitGroup, g)
+    
+    loop
+        set u2 = FirstOfGroup(g)
+        exitwhen (u2==null)
+        
+            set t = LoadReal(udg_AIUnitData, GetHandleId(u2), 203)
+            if (t > 0) then
+                set t = t - 0.10
+                call SaveReal(udg_AIUnitData, GetHandleId(u2), 203, t)
+                
+                if (t <= 0) then
+                    call DisplayTextToForce(udg_AllPlayers,R2S(GetHandleId(u2))+" - Timer has run out.")
+                endif
+            endif
+            
+        call GroupRemoveUnit(g, u2)
+    endloop
+    
+    if (u != null) then
+        call AI_ExecuteUnitLogic(u)
+    else //Group is empty, get new group
+        call GroupAddGroup(udg_AIUnitGroup, udg_AIUnitGroupI)
+        set u = FirstOfGroup(udg_AIUnitGroupI)
+    endif
+    
+    call GroupRemoveUnit(udg_AIUnitGroupI, u)
+    call DestroyGroup(g)
+    set u = null
+    set u2 = null
+endfunction
+
+//When unit dies
+function Trig_RemoveFromAITable_Actions takes nothing returns nothing
+    call GroupRemoveUnit(udg_AIUnitGroup, GetDyingUnit())
+    call GroupRemoveUnit(udg_AIUnitGroupI, GetDyingUnit())
+    call FlushChildHashtable( udg_AIUnitData, GetHandleId(GetDyingUnit()) )
+endfunction
+
+//React to attacks
+function Trig_AIReactToAttack_Actions takes nothing returns nothing
+    local group g = CreateGroup()
+    local unit attacked = GetTriggerUnit()
+    local location l = GetUnitLoc(attacked)
+    local location li
+    local unit u = null
+    local player attackingPlayer = GetOwningPlayer(GetAttacker())
+    
+    call GroupEnumUnitsInRangeOfLoc(g, l, 5000.00, null)
+    
+    loop
+        set u = FirstOfGroup(g)
+        exitwhen (u == null)
+        set li = GetUnitLoc(u)
+        
+        if (LoadBoolean(udg_AIUnitData,GetHandleId(u), 200) == false) then   //If the unit is not holding position
+        if (DistanceBetweenPoints(l,li) < LoadReal(udg_AIUnitData,GetHandleId(u), 202)) then   //If the unit is within the minimum guarding distance
+        if (LoadReal(udg_AIUnitData,GetHandleId(u), 203) < udg_AI_ReturnTime-2) then   //If the unit has not been ordered just recently
+            if (IsUnitType(u, UNIT_TYPE_ATTACKS_GROUND)) then //Only units that can attack (We dont use air)
+                if (IsUnitAlly(attacked, attackingPlayer ) == false) then //Only act if they are enemies
+                if (UnitsHaveSameOwner(attacked, u)) then //Only care about units having the same owner
+                    call IssuePointOrderLoc( u, "attack", l)
+                    call SaveReal(udg_AIUnitData,GetHandleId(u), 203, udg_AI_ReturnTime) //TODO: Fix up the default return time
+                endif
+                endif
+            endif
+        endif
+        endif
+        endif
+        
+        call RemoveLocation(li)
+        call GroupRemoveUnit(g,u)
+    endloop
+    
+    call DestroyGroup(g)
+    call RemoveLocation(l)
+    set attacked = null
+    set u = null
+    set attackingPlayer = null
+    set l = null
+    set li = null
+endfunction
+
+//React to attacks
+function Trig_UpdateWhenAttacking takes nothing returns nothing
+    local unit defender = GetTriggerUnit()
+    local unit attacker = GetAttacker()
+    
+    
+    if (IsUnitAlly(defender, GetOwningPlayer(attacker)) == false) then
+        if (GetPlayerId(GetOwningPlayer(attacker)) <= 1) then //Red and Blue
+            call SaveReal(udg_AIUnitData,GetHandleId(attacker), 203, udg_AI_ReturnTime) //Readjust return time if attacker is AI
+        endif
+        if (GetPlayerId(GetOwningPlayer(defender)) <= 1) then //Red and Blue
+            call SaveReal(udg_AIUnitData,GetHandleId(defender), 203, udg_AI_ReturnTime) //Readjust return time if defender is AI
+        endif
+    endif
+    
+    set defender = null
+    set attacker = null
+endfunction
+
+//Triggers setup
+function InitTrig_AIExecuteLogic takes nothing returns nothing
+    set gg_trg_AIExecuteLogic = CreateTrigger(  )
+    call TriggerRegisterTimerEvent( gg_trg_AIExecuteLogic, 0.10 , true)
+    call TriggerAddAction( gg_trg_AIExecuteLogic, function Trig_AIExecuteLogic_Actions )
+    
+    set udg_trg_AIReactToAttack = CreateTrigger(  )
+    call TriggerRegisterPlayerUnitEvent( udg_trg_AIReactToAttack, Player(0), EVENT_PLAYER_UNIT_ATTACKED, null )
+    call TriggerRegisterPlayerUnitEvent( udg_trg_AIReactToAttack, Player(1), EVENT_PLAYER_UNIT_ATTACKED, null )
+    call TriggerAddAction( udg_trg_AIReactToAttack, function Trig_AIReactToAttack_Actions )
+    
+    set udg_trg_RemoveFromAITable = CreateTrigger(  )
+    call TriggerRegisterPlayerUnitEvent( udg_trg_RemoveFromAITable, udg_PlayerRed, EVENT_PLAYER_UNIT_DEATH, null )
+    call TriggerRegisterPlayerUnitEvent( udg_trg_RemoveFromAITable, udg_PlayerBlue, EVENT_PLAYER_UNIT_DEATH, null )
+    call TriggerAddAction( udg_trg_RemoveFromAITable, function Trig_RemoveFromAITable_Actions )
+    
+    set udg_trg_UpdateWhenAttacking = CreateTrigger(  )
+    call TriggerRegisterAnyUnitEventBJ( udg_trg_UpdateWhenAttacking, EVENT_PLAYER_UNIT_ATTACKED )
+    call TriggerAddAction( udg_trg_UpdateWhenAttacking, function Trig_UpdateWhenAttacking )
+endfunction

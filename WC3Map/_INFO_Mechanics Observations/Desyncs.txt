@@ -1,0 +1,38 @@
+There are several aspects that causes desyncs in your map:
+
+Using bots:
+	Bots have grown unstable due to the new patches.
+
+
+Terrain Deformations:
+	They may cause desyncs, usually a bad idea to use them.
+	They are fine to use in singleplayer/campaign.
+	I would assume the desync occurs because of the Z location.
+	
+	
+Map Widgitized:
+	If your map... or a map before you map is widgitized it might cause the data of unit/abilities/items ... etc...
+	To not properly sync up between players... thus causing desyncs (Simple, Avoid Widgitizing your map.)
+	
+GetLocalPlayer():
+	This function gets the local player (usually for IF statements.)
+	However doing things that influence the game (Changing unit stats, changing variable values.. etc.. etc..) Obviously causes a desync (as the lockstep engine is no longer able to replicate the exact same conditions.).
+	
+	
+Using "Pan camera as necessary":
+	Dont know why it happens, but it does.
+	
+	
+Using more 15 tiles:
+	The 16th tile is known to be corrupted.
+	
+	
+Following gameplay constants:
+	GuardDistance
+	MaxGuardDistance
+	GuardReturnTime
+	BuildingPlacementNotifyRadius
+	NeutralUseNotifyRadius
+	CreepCampPathingCellDistance
+	
+	*I dont have a theory about these.
