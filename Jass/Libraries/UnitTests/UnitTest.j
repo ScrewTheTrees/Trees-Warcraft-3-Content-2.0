@@ -1,16 +1,10 @@
 
 library STTUnitTest initializer init
-	private struct UnitTest
-		public trigger Trigger = null
-		public triggeraction TriggerAction = null
-		public triggeraction TriggerActionCallback = null
-	endstruct
-	
 	globals
 		public boolean enabled = true
 		private trigger MainTrigger
 	
-		private UnitTest array UnitTests
+		private hashtable UnitTests = InitHashtable()
 		private integer NrOfTestTriggers = 0
 		private boolean isRunning = false
 		private integer CurrentTestedTrigger = 0
@@ -25,24 +19,20 @@ library STTUnitTest initializer init
 		call BJDebugMsg(s)
 	endfunction
 	
-	private function RunNextUnitTest takes nothing returns nothing
+	private function RunNextUnitTests takes nothing returns nothing
 		if (CurrentTestedTrigger < NrOfTestTriggers) then
 			set isRunning = true
 			set success = true
-			call TriggerExecute(UnitTests[CurrentTestedTrigger].Trigger)
+			call TriggerExecute(LoadTriggerHandle(UnitTests, CurrentTestedTrigger, 0))
 		endif
 	endfunction
 
 	private function Remove takes integer id returns nothing
-		local UnitTest ut = UnitTests[id]
 		if (id != null) then
-			call TriggerRemoveAction(ut.Trigger, ut.TriggerAction)
-			call TriggerRemoveAction(ut.Trigger, ut.TriggerActionCallback)
-			call DestroyTrigger(ut.Trigger)
-			set ut.Trigger = null
-			set ut.TriggerAction = null
-			set ut.TriggerActionCallback = null
-			call ut.destroy()
+			call TriggerRemoveAction(LoadTriggerHandle(UnitTests, id, 0), LoadTriggerActionHandle(UnitTests, id, 1))
+			call TriggerRemoveAction(LoadTriggerHandle(UnitTests, id, 0), LoadTriggerActionHandle(UnitTests, id, 2))
+			call DestroyTrigger(LoadTriggerHandle(UnitTests, id, 0))
+			call FlushChildHashtable(UnitTests, id)
 		endif
 	endfunction
 	
@@ -58,15 +48,15 @@ library STTUnitTest initializer init
 	endfunction
 	
 	public function Add takes code testFunc returns nothing
-		local UnitTest ut
+		local trigger t
 		if (enabled) then
-			set ut = UnitTest.create()
-			set ut.Trigger = CreateTrigger()
-			set ut.TriggerAction = TriggerAddAction(ut.Trigger, testFunc)
-			set ut.TriggerActionCallback = TriggerAddAction(ut.Trigger, function ActionCallback)
-			set UnitTests[NrOfTestTriggers] = ut
+			set t = CreateTrigger()
+			call SaveTriggerHandle(UnitTests, NrOfTestTriggers, 0, t)
+			call SaveTriggerActionHandle(UnitTests, NrOfTestTriggers, 1, TriggerAddAction(t, testFunc))
+			call SaveTriggerActionHandle(UnitTests, NrOfTestTriggers, 2, TriggerAddAction(t, function ActionCallback))
 			set NrOfTestTriggers = NrOfTestTriggers + 1
 		endif
+		set t = null
 	endfunction
 	
 	public function AssertEqualsI takes integer int1, integer int2, string msg returns boolean
@@ -85,7 +75,7 @@ library STTUnitTest initializer init
 		if (enabled) then
 			set MainTrigger = CreateTrigger()
 			call TriggerRegisterTimerEvent(MainTrigger, WaitBeforeTesting, false)
-			call TriggerAddAction(MainTrigger, function RunNextUnitTest)
+			call TriggerAddAction(MainTrigger, function RunNextUnitTests)
 			call Msg("UnitTest system by ScrewTheTrees.")
 		endif
 	endfunction
