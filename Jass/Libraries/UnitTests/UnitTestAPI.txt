@@ -1,0 +1,41 @@
+/**	All functions start with STTUnitTest_, due to vJass libraries.
+*	It follows a C#/Java syntax for clarity.
+*	All tests are cleaned up by the library.
+*/
+
+
+/**	Add a function to the test list.
+*	Should always be used. 
+*/
+public nothing Add(code testFunc)
+
+/**	Prints out (( "|c0000FF00Success!|r: " + msg ))    and declares that the test was successful.
+*	This also sets the "triggerSuccess" flag to true.
+*	Its reccommended that "msg" contains the test functions name.
+*	These are used internally 
+*/
+public nothing Success(string msg)
+
+/**	Prints out (( "|c00FF0000Failure!: |r" + msg ))    and declares that the test was a failure.
+*	This also sets the "triggerSuccess" flag to false. causing a delay until the next test, plays a sound, adds to the error list.
+*	Its reccommended that "msg" contains the test functions name.
+*	These are used internally.
+*/
+public nothing Fail(string msg)
+
+
+
+
+
+/**	Global Rules for assertions
+*	Replace T in function name with the first letter of the type. (B, I, R, S)
+*	Replace (T) in the variable parameters with the full variable type. 
+*	Currently only "boolean, integer, real & string" are supported. (BIRS), but you can make your own using the Fail and Success functions.
+*/
+
+
+/**	Asserts that value X == Y.  */
+public boolean AssertEqualsT((T) x, (T) y, string msg)
+
+/** Asserts that value X != Y. */
+public boolean AssertEqualsNotT((T) x, (T) y, string msg)
