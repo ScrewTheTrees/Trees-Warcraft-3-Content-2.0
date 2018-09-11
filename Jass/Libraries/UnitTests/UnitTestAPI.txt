@@ -1,6 +1,6 @@
-/**	All functions start with STTUnitTest_, due to vJass libraries.
-*	It follows a C#/Java syntax for clarity.
-*	All tests are cleaned up by the library.
+/**	All functions start with  STTUnitTest_  due to vJass libraries.
+*	This document follows a C#/Java syntax for declaring functions, as they are easier to read than jass function declarations.
+*	All tests are cleaned up by the library, so you do not have to worry about garbage.
 */
 
 
@@ -11,15 +11,15 @@ public nothing Add(code testFunc)
 
 /**	Prints out (( "|c0000FF00Success!|r: " + msg ))    and declares that the test was successful.
 *	This also sets the "triggerSuccess" flag to true.
-*	Its reccommended that "msg" contains the test functions name.
-*	These are used internally 
+*	Its reccommended that "msg" contains the test name of the function or similar info.
+*	These are used internally by all asserts
 */
 public nothing Success(string msg)
 
 /**	Prints out (( "|c00FF0000Failure!: |r" + msg ))    and declares that the test was a failure.
 *	This also sets the "triggerSuccess" flag to false. causing a delay until the next test, plays a sound, adds to the error list.
-*	Its reccommended that "msg" contains the test functions name.
-*	These are used internally.
+*	Its reccommended that "msg" contains the test name of the function or similar info.
+*	These are used internally by all asserts
 */
 public nothing Fail(string msg)
 
@@ -27,15 +27,23 @@ public nothing Fail(string msg)
 
 
 
-/**	Global Rules for assertions
+/**	Rules for Assertions.
+*	All assertions only accept certain kinds of input (string, boolean, etc...), what types are allowed for each assert is within parenthesis ()
 *	Replace T in function name with the first letter of the type. (B, I, R, S)
 *	Replace (T) in the variable parameters with the full variable type. 
-*	Currently only "boolean, integer, real & string" are supported. (BIRS), but you can make your own using the Fail and Success functions.
+*	Currently only "boolean, integer, real & string" are supported. (B, I, R, S).
+*	You can however make your own validation using the Fail and Success functions.	
 */
 
 
-/**	Asserts that value X == Y.  */
+/**	Asserts that value X == Y.  (B,I,R,S) */
 public boolean AssertEqualsT((T) x, (T) y, string msg)
 
-/** Asserts that value X != Y. */
+/** Asserts that value X != Y.  (B,I,R,S) */
 public boolean AssertEqualsNotT((T) x, (T) y, string msg)
+
+/** Asserts that value X > Y.  (I,R) */
+public boolean AssertGreaterThanT((T) x, (T) y, string msg)
+
+/** Asserts that value X < Y.  (I,R) */
+public boolean AssertLessThanT((T) x, (T) y, string msg)

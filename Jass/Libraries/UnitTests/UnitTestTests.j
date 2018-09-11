@@ -32,7 +32,20 @@ library STTUnitTestTests initializer init requires STTUnitTest
 	private function TestSuccess takes nothing returns nothing
 		call STTUnitTest_Success("Im gonna work!")
 	endfunction
+	
+	private function TestAssertGreaterThanI takes nothing returns nothing
+		call STTUnitTest_AssertGreaterThanI(99, 22, "TestAssertGreaterThanI")
+	endfunction
+	private function TestAssertGreaterThanR takes nothing returns nothing
+		call STTUnitTest_AssertGreaterThanR(22.27, 22.25, "TestAssertGreaterThanR")
+	endfunction
 
+	private function TestAssertLessThanI takes nothing returns nothing
+		call STTUnitTest_AssertLessThanI(1996, 2005, "TestAssertLessThanI")
+	endfunction
+	private function TestAssertLessThanR takes nothing returns nothing
+		call STTUnitTest_AssertLessThanR(2004.9, 2005, "TestAssertLessThanR")
+	endfunction
 	
 	//===========================================================================
 	private function init takes nothing returns nothing
@@ -46,5 +59,9 @@ library STTUnitTestTests initializer init requires STTUnitTest
 		call STTUnitTest_Add(function TestAssertEqualsNotS)
 		call STTUnitTest_Add(function TestFail)
 		call STTUnitTest_Add(function TestSuccess)
+		call STTUnitTest_Add(function TestAssertGreaterThanI)
+		call STTUnitTest_Add(function TestAssertGreaterThanR)
+		call STTUnitTest_Add(function TestAssertLessThanI)
+		call STTUnitTest_Add(function TestAssertLessThanR)
 	endfunction
 endlibrary

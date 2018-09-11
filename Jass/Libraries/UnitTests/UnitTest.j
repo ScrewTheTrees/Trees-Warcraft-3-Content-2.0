@@ -13,9 +13,11 @@ library STTUnitTest initializer init
 		private integer CurrentTestedTrigger = 0
 		private integer NrOfTestTriggers = 0
 		
-		private real WaitBeforeTesting = 1.00
-		private real WaitDurationBetweenTests = 0.10
-		private real WaitExtraOnFail = 4.00
+		private string array errorList
+		
+		private constant real WaitBeforeTesting = 1.00
+		private constant real WaitDurationBetweenTests = 0.10
+		private constant real WaitExtraOnFail = 10.00
 	endglobals
 	
 	private function B2S takes boolean b returns string
@@ -68,6 +70,10 @@ library STTUnitTest initializer init
 		endif
 		set t = null
 	endfunction
+
+//=======================================================================================================================================
+//=======================================================================================================================================
+//=======================================================================================================================================
 	
 	public function Success takes string msg returns nothing
 		set triggerSuccess = true
@@ -79,7 +85,9 @@ library STTUnitTest initializer init
 		call Msg("|c00FF0000Failure!: |r" + msg)
 		call StartSound(errorSound)
 	endfunction
-	
+		
+//=======================================================================================================================================
+
 	public function AssertEqualsB takes boolean bool1, boolean bool2, string msg returns boolean
 		local string assertMsg =  msg + ":: AssertEqualsB:: "+B2S(bool1)+"=="+B2S(bool2)
 		local boolean ret = true
@@ -128,8 +136,10 @@ library STTUnitTest initializer init
 		return ret
 	endfunction
 	
+//=======================================================================================================================================
+
 	public function AssertEqualsNotB takes boolean bool1, boolean bool2, string msg returns boolean
-		local string assertMsg =  msg + ":: AssertEqualsNotB:: "+B2S(bool1)+"=="+B2S(bool2)
+		local string assertMsg =  msg + ":: AssertEqualsNotB:: "+B2S(bool1)+"!="+B2S(bool2)
 		local boolean ret = true
 		if not(bool1 == bool2) then
 			call Success(assertMsg)
@@ -141,7 +151,7 @@ library STTUnitTest initializer init
 	endfunction
 	
 	public function AssertEqualsNotI takes integer int1, integer int2, string msg returns boolean
-		local string assertMsg =  msg + ":: AssertEqualsNotI:: "+I2S(int1)+"=="+I2S(int2)
+		local string assertMsg =  msg + ":: AssertEqualsNotI:: "+I2S(int1)+"!="+I2S(int2)
 		local boolean ret = true
 		if not(int1 == int2) then
 			call Success(assertMsg)
@@ -153,7 +163,7 @@ library STTUnitTest initializer init
 	endfunction
 	
 	public function AssertEqualsNotR takes real real1, real real2, string msg returns boolean
-		local string assertMsg =  msg + ":: AssertEqualsNotR:: "+R2S(real1)+"=="+R2S(real2)
+		local string assertMsg =  msg + ":: AssertEqualsNotR:: "+R2S(real1)+"!="+R2S(real2)
 		local boolean ret = true
 		if not(real1 == real2) then
 			call Success(assertMsg)
@@ -165,7 +175,7 @@ library STTUnitTest initializer init
 	endfunction
 	
 	public function AssertEqualsNotS takes string str1, string str2, string msg returns boolean
-		local string assertMsg =  msg + ":: AssertEqualsNotS:: "+ str1 + "==" + str2
+		local string assertMsg =  msg + ":: AssertEqualsNotS:: "+ str1 + "!=" + str2
 		local boolean ret = true
 		if not(str1 == str2) then
 			call Success(assertMsg)
@@ -176,6 +186,59 @@ library STTUnitTest initializer init
 		return ret
 	endfunction
 	
+//=======================================================================================================================================
+
+	public function AssertGreaterThanI takes integer int1, integer int2, string msg returns boolean
+		local string assertMsg =  msg + ":: AssertGreaterThanI:: "+I2S(int1)+">"+I2S(int2)
+		local boolean ret = true
+		if (int1 > int2) then
+			call Success(assertMsg)
+		else
+			call Fail(assertMsg)
+			set ret = false
+		endif
+		return ret
+	endfunction
+	
+	public function AssertGreaterThanR takes real real1, real real2, string msg returns boolean
+		local string assertMsg =  msg + ":: AssertGreaterThanR:: "+R2S(real1)+">"+R2S(real2)
+		local boolean ret = true
+		if (real1 > real2) then
+			call Success(assertMsg)
+		else
+			call Fail(assertMsg)
+			set ret = false
+		endif
+		return ret
+	endfunction
+
+//=======================================================================================================================================
+
+	public function AssertLessThanI takes integer int1, integer int2, string msg returns boolean
+		local string assertMsg =  msg + ":: AssertLessThanI:: "+I2S(int1)+"<"+I2S(int2)
+		local boolean ret = true
+		if (int1 < int2) then
+			call Success(assertMsg)
+		else
+			call Fail(assertMsg)
+			set ret = false
+		endif
+		return ret
+	endfunction
+	
+	public function AssertLessThanR takes real real1, real real2, string msg returns boolean
+		local string assertMsg =  msg + ":: AssertLessThanR:: "+R2S(real1)+"<"+R2S(real2)
+		local boolean ret = true
+		if (real1 < real2) then
+			call Success(assertMsg)
+		else
+			call Fail(assertMsg)
+			set ret = false
+		endif
+		return ret
+	endfunction
+	
+//=======================================================================================================================================
 	
 	private function init takes nothing returns nothing
 		if (enabled) then
