@@ -1,0 +1,25 @@
+library STTUnitTest initializer init
+	globals
+	
+	endglobals
+	
+	
+	
+	//===========================================================================
+	private function init takes nothing returns nothing
+		call STTUnitTest_Add(function TestAssertEqualsB)
+		call STTUnitTest_Add(function TestAssertEqualsI)
+		call STTUnitTest_Add(function TestAssertEqualsR)
+		call STTUnitTest_Add(function TestAssertEqualsS)
+		call STTUnitTest_Add(function TestAssertEqualsNotB)
+		call STTUnitTest_Add(function TestAssertEqualsNotI)
+		call STTUnitTest_Add(function TestAssertEqualsNotR)
+		call STTUnitTest_Add(function TestAssertEqualsNotS)
+		call STTUnitTest_Add(function TestFail)
+		call STTUnitTest_Add(function TestSuccess)
+		call STTUnitTest_Add(function TestAssertGreaterThanI)
+		call STTUnitTest_Add(function TestAssertGreaterThanR)
+		call STTUnitTest_Add(function TestAssertLessThanI)
+		call STTUnitTest_Add(function TestAssertLessThanR)
+	endfunction
+endlibrary

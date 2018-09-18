@@ -1,3 +1,10 @@
+The "Targets Allowed" field for attacking and abilities work in a very specfic way, as explained here.
+There are 4 subcategories in this bitfield, these categories stack with each other as "AND" and "OR".
+"Widget targets" stack as "OR" with the 3 other categories, they are independent.
+Primary Unit Targets stack as "AND" with Unit Attributes and Unit Targeting Flags, IE when "Friend, Air" is used its gonna target your air units.
+Every tag inside each category stack with each other as "OR".
+
+
 ------ WIDGET TARGETS ------
 ITEM,
 TREE,
