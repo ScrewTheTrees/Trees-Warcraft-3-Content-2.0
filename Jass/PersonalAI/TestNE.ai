@@ -1,0 +1,1044 @@
+//===========================================================================
+// 
+//  ScrewTheTrees
+// 
+//===========================================================================
+globals
+    integer pretend_gold = 0
+    integer pretend_wood = 0
+
+    constant integer BUILDMODE_TIER1_NONE = 0
+    constant integer BUILDMODE_TIER1_ECONOMIC = 1
+    constant integer BUILDMODE_TIER1_HUNTRESS_RUSH = 2
+
+    constant integer BUILDMODE_TIER2_NONE = 0
+    constant integer BUILDMODE_TIER2_ECONOMIC = 1
+    constant integer BUILDMODE_TIER2_DRUIDS = 2
+
+    constant integer BUILDMODE_TIER3_NONE = 0
+    constant integer BUILDMODE_TIER3_ECONOMIC = 1
+    constant integer BUILDMODE_TIER3_DRUIDS = 2
+
+
+    integer creeping_level_start = 0
+    integer creeping_level_end = 9
+    boolean creeping_air = false
+    
+
+    boolean isStart = true
+    integer buildModeTier1 = BUILDMODE_TIER1_NONE
+    integer buildModeTier2 = BUILDMODE_TIER2_NONE
+    integer buildModeTier3 = BUILDMODE_TIER3_NONE
+
+    integer wanted_force_level = 3
+    boolean want_expand = false
+    boolean want_expand2 = false
+    boolean want_emergency_expand = false
+    boolean want_attack = false
+    boolean want_attack_expansion = false
+    boolean want_attack_ignore_towers = false
+
+    integer ai_wanted_wisp = 0
+    integer ai_wanted_archer = 0
+    integer ai_wanted_huntress = 0
+    integer ai_wanted_ballista = 0
+
+    integer ai_wanted_dryad = 0
+    integer ai_wanted_druid_claw = 0
+    integer ai_wanted_druid_talon = 0
+    integer ai_wanted_mountain_giants = 0
+    integer ai_wanted_faerie_dragons = 0
+    integer ai_wanted_hippo = 0
+    integer insaneModifier = 0
+
+    integer ai_wanted_moon_wells = 1
+
+    boolean ai_tech_tier2 = false
+    boolean ai_tech_tier3 = false
+
+    boolean ai_waitfor_1 = false
+    boolean ai_waitfor_2 = false
+    boolean ai_waitfor_3 = false
+    boolean ai_waitfor_4 = false
+    boolean ai_waitfor_5 = false
+
+    boolean ai_waitfor2_1 = false
+    boolean ai_waitfor2_2 = false
+    boolean ai_waitfor2_3 = false
+    boolean ai_waitfor2_4 = false
+    boolean ai_waitfor2_5 = false
+
+    boolean ai_waitfor3_1 = false
+    boolean ai_waitfor3_2 = false
+    boolean ai_waitfor3_3 = false
+    boolean ai_waitfor3_4 = false
+    boolean ai_waitfor3_5 = false
+
+
+    boolean is_tier_2 = false
+    boolean is_tier_3 = false
+endglobals
+
+function IMax takes integer x, integer y returns integer
+    if (x > y) then
+        return x
+    endif
+    return y
+endfunction
+function IMin takes integer x, integer y returns integer
+    if (x < y) then
+        return x
+    endif
+    return y
+endfunction
+
+
+function IBetween takes integer value, integer x, integer y returns boolean
+    local integer max = IMax(x, y)
+    local integer min = IMin(x, y)
+    if (value >= min and value <= max) then
+        return true
+    endif
+    return false
+endfunction
+
+function CanAffordUnit takes integer unitId, integer quantity returns boolean
+    return (GetGold() > GetUnitGoldCost(unitId) * quantity and GetWood() > GetUnitWoodCost(unitId) * quantity)
+endfunction
+
+function GetQueueWoodValue takes integer unitId,integer quantity returns integer
+    local integer value = 0
+    local integer needed = quantity - GetUnitCount(unitId)
+    if (needed > 0) then
+        set value = needed * GetUnitWoodCost(unitId)
+    endif
+    return value
+endfunction
+function GetQueueGoldValue takes integer unitId,integer quantity returns integer
+    local integer value = 0
+    local integer needed = quantity - GetUnitCount(unitId)
+    if (needed > 0) then
+        set value = needed * GetUnitGoldCost(unitId)
+    endif
+    return value
+endfunction
+
+function GetEnemyCount takes player whichPlayer returns integer
+    local integer    playerIndex = 0
+    local integer    count = 0
+    local player     indexPlayer
+
+    loop
+        set indexPlayer = Player(playerIndex)
+
+        if whichPlayer != indexPlayer then
+            if not GetPlayerAlliance(whichPlayer,indexPlayer,ALLIANCE_PASSIVE) then
+                if not GetPlayerAlliance(indexPlayer,whichPlayer,ALLIANCE_PASSIVE) then
+                    if GetPlayerStructureCount(indexPlayer,true) > 0 then
+                        set count = count + 1
+                    endif
+                endif
+            endif
+        endif
+         
+        set playerIndex = playerIndex + 1
+        exitwhen playerIndex == GetBJMaxPlayers()
+    endloop
+
+    return count
+endfunction
+
+function Msg takes string msg returns nothing
+    local integer i = 0
+    loop
+        call DisplayTimedTextToPlayer(Player(i),0,0,30,msg)
+        set i = i + 1
+        exitwhen i == 3
+    endloop
+endfunction
+
+
+function QueueUnit takes integer unitid, integer quantity returns boolean
+    return StartUnit(quantity, unitid, -1)
+endfunction
+function QueueBuilding takes integer unitid, integer quantity, integer town returns boolean
+    return StartUnit(quantity, unitid, town)
+endfunction
+function QueueUpgrade takes integer upgrade, integer level returns boolean
+    if (GetUpgradeLevel(upgrade) < level) then
+        set level = GetUpgradeLevel(upgrade) + 1
+    endif
+    return StartUpgrade(level,upgrade)
+endfunction
+
+function QueueUnitAncientOfWar takes integer unitid, integer quantity returns boolean
+    if (GetUnitCountDone(ANCIENT_WAR) > 0) then
+        return QueueUnit(unitid, IMin(GetUnitCountDone(unitid) + GetUnitCountDone(ANCIENT_WAR), quantity))
+    endif
+    return false
+endfunction
+function QueueUnitAncientOfWind takes integer unitid, integer quantity returns boolean
+    if (GetUnitCountDone(ANCIENT_WIND) > 0) then
+        return QueueUnit(unitid, IMin(GetUnitCountDone(unitid) + GetUnitCountDone(ANCIENT_WIND), quantity))
+    endif
+    return false
+endfunction
+function QueueUnitAncientOfLore takes integer unitid, integer quantity returns boolean
+    if (GetUnitCountDone(ANCIENT_LORE) > 0) then
+        return QueueUnit(unitid, IMin(GetUnitCountDone(unitid) + GetUnitCountDone(ANCIENT_LORE), quantity))
+    endif
+    return false
+endfunction
+
+function GetNumOfTREE takes nothing returns integer
+    local integer retvar = 0
+    set retvar = retvar + GetUnitCountDone(TREE_LIFE)
+    set retvar = retvar + GetUnitCountDone(TREE_ETERNITY)
+    set retvar = retvar + GetUnitCountDone(TREE_AGES)
+    return retvar
+endfunction
+function ForceLevel takes nothing returns real
+    local real level = 0
+    set level = level + (2 * GetUnitCountDone(hero_id))
+    set level = level + (2 * GetUnitCountDone(hero_id2))
+    set level = level + (2 * GetUnitCountDone(hero_id3))
+    set level = level + (2 * GetUnitCountDone(ARCHER))
+    set level = level + (3 * GetUnitCountDone(HUNTRESS))
+    set level = level + (3 * GetUnitCountDone(DRYAD))
+    set level = level + (3 * GetUnitCountDone(DRUID_CLAW))
+    set level = level + (4 * GetUnitCountDone(MOUNTAIN_GIANT))
+    set level = level + (2 * GetUnitCountDone(DRUID_TALON))
+    set level = level + (1 * GetUnitCountDone(HIPPO))
+    set level = level + (2 * GetUnitCountDone(FAERIE_DRAGON))
+    set level = level + (5 * GetUnitCountDone(CHIMAERA))
+    
+    return (level)
+endfunction
+
+function GenerateAIBehavior takes nothing returns nothing
+    local integer tier1 = GetRandomInt(0, 2)
+    local integer tier2 = GetRandomInt(0, 2)
+    local integer tier3 = GetRandomInt(0, 2)
+    local integer hero = GetRandomInt(0, 2)
+    
+    set tier1 = BUILDMODE_TIER1_NONE //Test
+    set tier2 = BUILDMODE_TIER2_NONE //Test
+    set tier3 = BUILDMODE_TIER2_NONE //Test
+
+    set buildModeTier1 = tier1
+    set buildModeTier2 = tier2
+    set buildModeTier3 = tier3
+    if (tier1 == BUILDMODE_TIER1_NONE) then
+        if (hero == 0) then
+            call Msg("DEMON_HUNTER - KEEPER - MOON_BABE")
+            set hero_id = DEMON_HUNTER
+            set hero_id2 = KEEPER
+            set hero_id3 = MOON_BABE
+        elseif (hero == 1) then
+            call Msg("WARDEN - DEMON_HUNTER - MOON_BABE")
+            set hero_id = WARDEN
+            set hero_id2 = DEMON_HUNTER
+            set hero_id3 = MOON_BABE
+        elseif (hero == 2) then
+            call Msg("KEEPER - MOON_BABE - DEMON_HUNTER")
+            set hero_id = KEEPER
+            set hero_id2 = MOON_BABE
+            set hero_id3 = DEMON_HUNTER
+        endif
+    elseif (buildModeTier1 == BUILDMODE_TIER1_HUNTRESS_RUSH) then
+        call Msg("MOON_BABE - KEEPER - DEMON_HUNTER")
+        set hero_id = MOON_BABE
+        set hero_id2 = KEEPER
+        set hero_id3 = DEMON_HUNTER
+    endif
+endfunction
+
+//===========================================================================
+// Specifies harvesting priorities for workers
+//===========================================================================
+function HarvestPriorities takes nothing returns nothing
+    local integer insaneModifier = 0
+    local integer currentTown = TownWithMine()
+
+    if (MeleeDifficulty() == MELEE_INSANE) then
+        set insaneModifier = 1
+    endif
+
+    if (buildModeTier1==BUILDMODE_TIER1_HUNTRESS_RUSH) then //Use a rush build instead.
+        call HarvestGold( currentTown, 5 )
+        call HarvestWood( currentTown, 2 )
+    else
+        call HarvestGold( currentTown, 3 )
+        call HarvestWood( currentTown, 1 + insaneModifier)
+        call HarvestGold( currentTown, 2 )
+    endif
+    
+    if (GetUnitCountDone(ELF_MINE) >= 2) then
+        call HarvestGold( currentTown + 1, 5 )
+        call HarvestWood( 1, 2 )
+    endif
+    if (GetUnitCountDone(ELF_MINE) >= 3) then
+        call HarvestGold( currentTown + 2, 5 )
+        call HarvestWood( 2, 2 )
+    endif
+    //call HarvestWood( -1, 25 )
+endfunction
+
+
+function UpdateTier1_None_Wants takes nothing returns nothing
+    if (GetUnitCountDone(HUNTERS_HALL) > 0) then
+        set ai_wanted_archer = 2
+        set ai_wanted_huntress = 5
+    else
+        set ai_wanted_archer = 4
+    endif
+    if (GetUnitCountDone(HUNTERS_HALL) > 0 and ForceLevel() > 10) then
+        if (GetUnitCount(ELF_MINE) < 2) then
+            set want_expand = true
+        else
+            set ai_wanted_wisp = 20 //When we have an expansion, might as well get some more lumber.
+        endif
+    endif
+    //Tech
+    if (GetUnitCount(TREE_AGES) <= 0 and (GetUnitCount(TREE_ETERNITY) <= 0) and (GetUnitCount(HUNTERS_HALL) > 0)) then
+        set isStart = false
+        set ai_tech_tier2 = true
+    endif
+endfunction
+function BuildMode_Tier1_None takes integer currentTown returns nothing
+    call QueueBuilding(ELF_ALTAR, 1, currentTown)
+    call QueueBuilding(ANCIENT_WAR, 1, currentTown)
+
+    if (ai_tech_tier2 == true) then
+        if (GetTownUnitCount(TREE_LIFE, currentTown, true) > 0) then
+            call QueueBuilding(TREE_AGES, 1, currentTown)
+        elseif (GetTownUnitCount(TREE_LIFE, currentTown + 1, true) > 0) then
+            call QueueBuilding(TREE_AGES, 1, currentTown + 1)
+        endif
+    endif
+    
+    if (want_expand and GetTownUnitCount(TREE_LIFE, currentTown + 1, true) == 0) then
+        call StartExpansion(2, TREE_LIFE)
+    endif
+
+    call QueueUnitAncientOfWar(ARCHER, ai_wanted_archer)
+    call QueueUnitAncientOfWar(HUNTRESS, ai_wanted_huntress)
+
+    call QueueBuilding(HUNTERS_HALL, 1, currentTown)
+    call QueueBuilding(ANCIENT_WAR, 1 + insaneModifier, currentTown)
+
+    if (GetUnitCountDone(HUNTERS_HALL) > 0) then
+        call QueueUpgrade(UPG_STR_MOON, 1)
+        call QueueUpgrade(UPG_MOON_ARMOR, 1)
+    endif
+    if (ai_tech_tier2) then
+        call GuardSecondary(currentTown, 2, ANCIENT_PROTECT)
+    endif
+    if (GetGold() > 1000) then
+        call QueueBuilding(ANCIENT_WAR, 2, -1)
+    endif
+
+    if (GetTownUnitCount(TREE_LIFE, currentTown + 1, true) > 0) then //Tower up expansion
+        if (MeleeDifficulty() != MELEE_NEWBIE) then
+            call GuardSecondary(1, 2, ANCIENT_PROTECT)
+        endif
+    endif
+endfunction
+
+function UpdateTier2_None_Wants takes nothing returns nothing
+    set ai_wanted_dryad = 2
+    set ai_wanted_druid_claw = 3
+    set ai_wanted_druid_talon = 3
+    set ai_wanted_faerie_dragons = 1
+    set creeping_air = true
+
+    if (is_tier_2) then
+        set ai_wanted_ballista = 2
+        if (GetUnitCountDone(BALLISTA) > 0 or GetUnitCountDone(MOUNTAIN_GIANT) > 0 and (GetEnemyCount(ai_player) < GetAllyCount(ai_player) + 5)) then
+        	set want_attack_expansion = true
+            set want_attack_ignore_towers = true
+            set want_attack = true
+        endif
+    endif
+
+    if (GetUnitCountDone(TREE_AGES) > 0 and (GetUnitCount(TREE_ETERNITY) <= 0)) then
+        set ai_tech_tier3 = true
+    endif
+endfunction
+function BuildMode_Tier2_None takes integer currentTown returns nothing
+    if (GetUnitCountDone(ANCIENT_LORE) > 0) then
+        call QueueUnitAncientOfLore(DRYAD, ai_wanted_dryad)
+        call QueueUnitAncientOfLore(DRUID_CLAW, ai_wanted_druid_claw)
+        call QueueUnitAncientOfLore(MOUNTAIN_GIANT, ai_wanted_mountain_giants)
+    endif
+    if (GetUnitCountDone(ANCIENT_WIND) > 0) then
+        call QueueUnitAncientOfWind(HIPPO, ai_wanted_hippo)
+        call QueueUnitAncientOfWind(DRUID_TALON, ai_wanted_druid_talon)
+        call QueueUnitAncientOfWind(FAERIE_DRAGON, ai_wanted_faerie_dragons)
+    endif
+    if (GetUnitCountDone(ANCIENT_WAR) > 0) then
+        call QueueUnitAncientOfWar(BALLISTA, ai_wanted_ballista)
+    endif
+
+    if (is_tier_2) then 
+        if (ai_tech_tier3 == true) then
+            call QueueBuilding(TREE_ETERNITY, 1, -1)
+        endif
+
+        call QueueBuilding(DEN_OF_WONDERS, 1, -1) //Its honestly not that important for an AI, they dont really use it until T2, T3
+
+        call QueueBuilding(ANCIENT_LORE, 1 + insaneModifier, -1)
+        call QueueBuilding(ANCIENT_WIND, 1 + insaneModifier, -1)
+
+        call QueueUnit(hero_id2, 1)
+
+        call QueueUpgrade(UPG_DRUID_TALON, 1)
+        call QueueUpgrade(UPG_DRUID_CLAW, 1)
+        call QueueUpgrade(UPG_GLAIVE, 1)
+        call QueueUpgrade(UPG_BOWS, 1)
+        call QueueUpgrade(UPG_ABOLISH, 1)
+        call QueueUpgrade(UPG_WELL_SPRING, 1)
+        call QueueUpgrade(UPG_STR_MOON, 2)
+        call QueueUpgrade(UPG_MOON_ARMOR, 2)
+        call QueueUpgrade(UPG_STR_WILD, 2)
+        call QueueUpgrade(UPG_HIDES, 2)
+        call QueueUpgrade(UPG_BOLT, 1)
+    endif
+endfunction
+
+function UpdateTier3_None_Wants takes nothing returns nothing
+    set ai_wanted_mountain_giants = 1
+
+    if (is_tier_3) then
+        if (GetUnitCountDone(BALLISTA) > 0 or GetUnitCountDone(MOUNTAIN_GIANT) > 0 and (GetEnemyCount(ai_player) < GetAllyCount(ai_player) + 5)) then
+            set want_attack = true
+            set want_attack_expansion = true
+            set want_attack_ignore_towers = true
+        endif
+        if (GetUnitCount(ELF_MINE) < 3) then
+            set want_expand2 = true
+        endif
+    endif
+endfunction
+function BuildMode_Tier3_None takes integer currentTown returns nothing
+    if (GetUnitCountDone(ANCIENT_LORE) > 0) then
+        call QueueUnitAncientOfLore(MOUNTAIN_GIANT, ai_wanted_mountain_giants)
+    endif
+
+    if (is_tier_3) then
+        if (MeleeDifficulty() != MELEE_NEWBIE) then
+            call QueueUnit(hero_id3, 1)
+        endif
+
+        call QueueUpgrade(UPG_DRUID_TALON, 2)
+        call QueueUpgrade(UPG_DRUID_CLAW, 2)
+        call QueueUpgrade(UPG_STR_MOON, 3)
+        call QueueUpgrade(UPG_MOON_ARMOR, 3)
+        call QueueUpgrade(UPG_STR_WILD, 3)
+        call QueueUpgrade(UPG_HIDES, 3)
+        call QueueUpgrade(UPG_HIDES, 3)
+        call QueueUpgrade(UPG_MARKSMAN, 1)
+        call QueueUpgrade(UPG_RESIST_SKIN, 1)
+        call QueueUpgrade(UPG_HARD_SKIN, 1)
+
+        //At this stage we want them kinda everywhere
+        call QueueBuilding(MOON_WELL, 3, 0)
+        call QueueBuilding(MOON_WELL, 3, 1)
+
+        if (want_expand2 and GetTownUnitCount(TREE_LIFE, currentTown + 2, true) == 0) then
+            call StartExpansion(3, TREE_LIFE)
+        endif
+        if (GetTownUnitCount(TREE_LIFE, currentTown + 2, true) > 0) then //Tower up expansion
+            if (MeleeDifficulty() != MELEE_NEWBIE) then
+                call GuardSecondary(1, currentTown + 2, ANCIENT_PROTECT)
+            endif
+        endif
+    endif
+endfunction
+
+function UpdateTier1_HuntressRush_Wants takes nothing returns nothing
+    set ai_wanted_wisp = 13
+
+    if (GetUnitCountDone(HUNTERS_HALL) > 0) then
+        set ai_wanted_huntress = 10 + (insaneModifier * 5)
+    endif
+    //Tech
+    if (GetUnitCount(TREE_AGES) <= 0 and (GetUnitCount(TREE_ETERNITY) <= 0) and (GetUnitCount(HUNTRESS) > 9)) then
+        set isStart = false
+        set ai_tech_tier2 = true
+    endif
+    if (GetUnitCountDone(WISP) > 10 - insaneModifier) then //Want 11 wisps
+        set ai_waitfor_1 = true
+    endif
+    if (GetUnitCountDone(WISP) > 11 - insaneModifier) then //Want 12 wisps
+        set ai_waitfor_2 = true
+    endif
+    if (GetUnitCountDone(WISP) > 12 - insaneModifier and CanAffordUnit(ANCIENT_WAR, 2 + insaneModifier)) then //Need to afford 2 AOW and has wisps
+        set ai_waitfor_3 = true
+    endif
+
+    if (GetUnitCountDone(HUNTRESS) >= 6 and (GetEnemyCount(ai_player) < GetAllyCount(ai_player) + 5)) then
+        set want_attack = true
+        set want_attack_expansion = true
+        set want_attack_ignore_towers = true
+    endif
+    if (GetUnitCountDone(HUNTRESS) > 8) then
+        set ai_waitfor_4 = true
+    endif
+    if (is_tier_2) then
+        set buildModeTier1 = BUILDMODE_TIER1_NONE //At this stage we leave our sinful ways.
+    endif
+endfunction
+function BuildMode_Tier1_HuntressRush takes integer currentTown returns nothing
+    call QueueUnitAncientOfWar(HUNTRESS, ai_wanted_huntress)
+    if (ai_waitfor_1) then
+        call QueueBuilding(ELF_ALTAR, 1, currentTown)
+    endif
+    if (ai_waitfor_2) then
+        call QueueBuilding(HUNTERS_HALL, 1, currentTown)
+    endif
+    if (ai_waitfor_3) then
+        if (MeleeDifficulty() == MELEE_INSANE) then
+            call QueueBuilding(ANCIENT_WAR, 3, currentTown)
+        else
+            call QueueBuilding(ANCIENT_WAR, 2, currentTown)
+        endif
+    endif
+    if (ai_waitfor_4) then
+        call QueueUpgrade(UPG_STR_MOON, 1)
+        call QueueUpgrade(UPG_MOON_ARMOR, 1)
+    endif
+
+	if (ai_tech_tier2 == true) then
+        if (MeleeDifficulty() != MELEE_NEWBIE) then
+            call GuardSecondary(currentTown, 2, ANCIENT_PROTECT)
+        endif
+        if (GetTownUnitCount(TREE_LIFE, currentTown, true) > 0) then
+            call QueueBuilding(TREE_AGES, 1, currentTown)
+        elseif (GetTownUnitCount(TREE_LIFE, currentTown + 1, true) > 0) then
+            call QueueBuilding(TREE_AGES, 1, currentTown + 1)
+        endif
+    endif
+endfunction
+
+
+function UpdateWants takes nothing returns nothing
+    if (MeleeDifficulty() == MELEE_INSANE) then
+        set insaneModifier = 1
+    else
+        set insaneModifier = 0
+    endif
+
+    set ai_wanted_wisp = 0
+    set ai_wanted_archer = 0
+    set ai_wanted_huntress = 0
+    set ai_wanted_dryad = 0
+    set ai_wanted_druid_talon = 0
+    set ai_wanted_ballista = 0
+    set ai_wanted_druid_claw = 0
+    set ai_wanted_hippo = 0
+    set ai_wanted_mountain_giants = 0
+
+    set ai_wanted_moon_wells = 0
+
+    set want_expand = false
+    set want_expand2 = false
+    set want_emergency_expand = false
+    set want_attack = false
+    set want_attack_expansion = false
+    set want_attack_ignore_towers = false
+
+    set creeping_level_start = 0
+    set creeping_level_end = 0
+    set creeping_air = false
+
+    set ai_tech_tier2 = false
+    set ai_tech_tier3 = false
+
+    set is_tier_2 = false
+    set is_tier_3 = false
+endfunction
+function CreateWants takes nothing returns nothing
+    call UpdateWants()
+
+    set ai_waitfor_1 = false
+    set ai_waitfor_2 = false
+    set ai_waitfor_3 = false
+    set ai_waitfor_4 = false
+    set ai_waitfor_5 = false
+
+    set ai_waitfor2_1 = false
+    set ai_waitfor2_2 = false
+    set ai_waitfor2_3 = false
+    set ai_waitfor2_4 = false
+    set ai_waitfor2_5 = false
+
+    set ai_waitfor3_1 = false
+    set ai_waitfor3_2 = false
+    set ai_waitfor3_3 = false
+    set ai_waitfor3_4 = false
+    set ai_waitfor3_5 = false
+
+    set isStart = true
+endfunction
+
+function ProcessWants takes nothing returns nothing
+    local real level = ForceLevel()
+    
+    call UpdateWants() //Revert to default before we start messing with it.
+
+    set ai_wanted_wisp = 11 //Pretty high Ceil, but worth it.
+    if (FoodCap() > 20) then //We can afford it at this stage.
+        set ai_wanted_wisp = 15
+    endif
+
+    if (MeleeDifficulty() == MELEE_INSANE) then
+        set ai_wanted_moon_wells = R2I(FoodUsed() / 10) + 2
+    else
+        set ai_wanted_moon_wells = R2I(FoodUsed() / 10) + 1
+    endif
+
+    if (GetUnitCountDone(TREE_AGES) > 0) then
+        set is_tier_2 = true
+    endif
+    if (GetUnitCountDone(TREE_ETERNITY) > 0) then
+        set is_tier_2 = true
+        set is_tier_3 = true
+    endif
+    if (GetGoldOwned() < 2000 or (is_tier_3 and GetMinesOwned() < 2)) then
+        set want_emergency_expand = true
+    endif
+
+    if (buildModeTier1==BUILDMODE_TIER1_NONE) then //Normal buildpath
+        call UpdateTier1_None_Wants()
+    elseif (buildModeTier1 == BUILDMODE_TIER1_HUNTRESS_RUSH) then
+        call UpdateTier1_HuntressRush_Wants()
+    endif
+    if (buildModeTier2==BUILDMODE_TIER2_NONE) then
+        call UpdateTier2_None_Wants()
+    endif
+    if (buildModeTier3==BUILDMODE_TIER3_NONE) then
+        call UpdateTier3_None_Wants()
+    endif
+
+    //Update our creeping performance.
+    set creeping_level_start = 1
+    set creeping_level_end = R2I(level)
+endfunction
+
+function IterateBuildings takes nothing returns nothing
+    local integer currentTown = TownWithMine()
+
+    call InitBuildArray()
+
+    if not(TownHasHall(currentTown)) then
+        call QueueUnit(TREE_LIFE, currentTown)
+    endif
+
+    call QueueUnit(hero_id, 1)
+    if (is_tier_2 and GetUnitCount(hero_id) == 0) then
+        set total_gold = IMax(total_gold - 425, 0)
+    endif
+
+    if (want_emergency_expand and GetTownUnitCount(TREE_LIFE, currentTown + 3, true) == 0) then
+        call StartExpansion(4, TREE_LIFE)
+    endif
+
+    call QueueUnit(WISP, IMin(GetUnitCountDone(WISP) + GetNumOfTREE(), ai_wanted_wisp))
+    call QueueBuilding(MOON_WELL, IMin(GetUnitCountDone(MOON_WELL) + 2, ai_wanted_moon_wells), -1)
+
+    if (buildModeTier1 == BUILDMODE_TIER1_NONE) then
+        call BuildMode_Tier1_None(currentTown)
+    elseif (buildModeTier1 == BUILDMODE_TIER1_HUNTRESS_RUSH) then
+        call BuildMode_Tier1_HuntressRush(currentTown)
+    endif
+    if (buildModeTier2 == BUILDMODE_TIER2_NONE) then
+        call BuildMode_Tier2_None(currentTown)
+    endif
+    if (buildModeTier3 == BUILDMODE_TIER3_NONE) then
+        call BuildMode_Tier3_None(currentTown)
+    endif
+endfunction
+
+//===========================================================================
+// Determines all building and harvesting assignments for workers
+//===========================================================================
+
+function WorkerAssignment takes nothing returns nothing
+    loop
+        call ProcessWants()
+        // Harvesting
+        call ClearHarvestAI(  )
+        call HarvestPriorities(  )
+
+        //Building
+        call IterateBuildings(  )
+
+        call Sleep( 0.25 )
+    endloop
+endfunction
+
+
+
+function HaveMinimumAttackers takes nothing returns boolean
+    return ForceLevel() >= wanted_force_level
+endfunction
+
+//===========================================================================
+// Determines all attacking assignments
+//===========================================================================
+
+function PrepareForces takes nothing returns nothing
+    call AddAssault( GetUnitCountDone( KEEPER ), KEEPER )
+    call AddAssault( GetUnitCountDone( MOON_BABE ), MOON_BABE )
+    call AddAssault( GetUnitCountDone( DEMON_HUNTER ), DEMON_HUNTER )
+    call AddAssault( GetUnitCountDone( WARDEN ), WARDEN )
+    call AddAssault( GetUnitCountDone( 'earc' ), 'earc' )
+    call AddAssault( GetUnitCountDone( 'echm' ), 'echm' )
+    call AddAssault( GetUnitCountDone( 'edoc' ), 'edoc' )
+    call AddAssault( GetUnitCountDone( 'edot' ), 'edot' )
+    call AddAssault( GetUnitCountDone( 'edry' ), 'edry' )
+    call AddAssault( GetUnitCountDone( 'efdr' ), 'efdr' )
+    call AddAssault( GetUnitCountDone( 'ehip' ), 'ehip' )
+    call AddAssault( GetUnitCountDone( 'ehpr' ), 'ehpr' )
+    call AddAssault( GetUnitCountDone( 'emtg' ), 'emtg' )
+    call AddAssault( GetUnitCountDone( 'esen' ), 'esen' )
+
+    call AddAssault( GetUnitCountDone( BALLISTA ), BALLISTA )
+endfunction
+
+function AttackMoveKillANew takes unit target returns nothing
+    local integer count = 0
+    local integer iterator = 0
+
+    if target == null then
+        call SuicideSleep(1)
+        return
+    endif
+
+    call AttackMoveKill(target)
+
+    loop
+        exitwhen CaptainRetreating()
+        exitwhen CaptainReadinessHP() <= 25
+
+        exitwhen not UnitAlive(target)
+        exitwhen UnitInvis(target) and not IsUnitDetected(target,ai_player)
+
+        set iterator = iterator + 1
+        if (iterator >= 2) then
+            call PrepareForces(  )
+            set iterator = 0
+        endif
+
+        if not TownThreatened() then
+            call AttackMoveKill(target)
+        endif
+
+        call SuicideSleep(3)
+
+        if sleep_seconds < -40 then
+            if CaptainInCombat(true) then
+                set sleep_seconds = sleep_seconds + 5
+            else
+                set sleep_seconds = 0
+                call FormGroup(1, false)
+            endif
+        endif
+    endloop
+    set iterator = 0
+    //Sleep in combat
+    loop
+        loop
+            exitwhen not CaptainInCombat(true)  // Captain is not in combat.
+            exitwhen CaptainIsEmpty()           // Captain, we are dead?
+            call SuicideSleep(1)
+            set iterator = iterator + 1
+            if (iterator >= 2) then
+                call PrepareForces(  )
+                set iterator = 0
+            endif
+        endloop
+
+        set count = count + 1
+        exitwhen count >= 8
+    endloop
+endfunction
+
+function AnyPlayerAttackNew takes nothing returns boolean
+    local unit hall
+
+    set hall = GetEnemyExpansion()
+    if hall == null then
+        call StartGetEnemyBase()
+        loop
+            exitwhen not WaitGetEnemyBase()
+            call SuicideSleep(1)
+        endloop
+        set hall = GetEnemyBase()
+    endif
+    if (hall == null) then
+        return false
+    endif
+    call SetAllianceTarget(hall)
+    call FormGroup(1,true)
+    call AttackMoveKillANew(hall)
+    return true
+endfunction
+
+function AttackCreepCamp takes integer minCreepLevel, integer maxCreepLevel, boolean allowAir returns nothing
+    local unit target = GetCreepCamp(minCreepLevel, maxCreepLevel, allowAir)
+    call SetAllianceTarget(target)
+    call FormGroup(1, true)
+    call AttackMoveKillANew(target)
+endfunction
+
+function ProcessAttack takes nothing returns nothing
+    local boolean hasAllies = GetAllyCount(ai_player) > 0
+    local unit common
+    local unit expansion_creep
+    local unit expansion_hall
+
+    call SetGroupsFlee( true ) //Normal AI behavior
+
+    if TownThreatened() then //We cannot do shit anyway
+        call Msg("Protecting town.")
+        call Sleep(2)
+        return
+    endif
+
+    //Coordinate with allies.
+    if hasAllies then
+        set common = GetAllianceTarget()
+        if common != null then
+            call Msg("Coordinating with allies.")
+            if GetMegaTarget() != null then
+                //call PrepareSiege()
+            endif
+            call FormGroup(1,true)
+            call AttackMoveKillANew(common)
+            call SetAllianceTarget(null)
+            return
+        endif
+    endif
+
+    if (want_expand or want_expand2 or want_emergency_expand) then
+        call Msg("Want Expand.")
+        set expansion_creep = GetExpansionFoe()
+        if expansion_creep != null then
+            call Msg("Found expansion_creep")
+            call FormGroup(1,true)
+            call AttackMoveKillANew(expansion_creep )
+            return
+        endif
+        call Msg("  - No Expansion expansion creep found, already cleared.")
+    endif
+
+    if (want_attack_expansion) then
+        set expansion_hall = GetEnemyExpansion()
+        call Msg("Attack expansion.")
+
+        if (expansion_hall!=null and (not IsTowered(expansion_hall) or want_attack_ignore_towers)) then
+            call Msg("   - Expansion found, slaughter")
+            call SetAllianceTarget(expansion_hall)
+            call FormGroup(1,true)
+            call AttackMoveKillANew(expansion_hall)
+            return
+        endif
+        call Msg("   - Couldnt find expansion.")
+    endif
+
+    if (want_attack) then
+        call Msg("Attack enemy base.")
+        if (AnyPlayerAttackNew() == true) then
+            return
+        else
+            call Msg("   - No base found, Is all enemies dead?")
+        endif
+    endif
+
+    call Msg("Do normal creeping.")
+    if (isStart) then
+        call Msg("  - Do not flee.")
+        call SetGroupsFlee( false )
+    endif
+    call AttackCreepCamp(creeping_level_start, creeping_level_end, creeping_air)
+endfunction
+
+
+function AttackAssignment takes nothing returns nothing
+    call StaggerSleep(1,2)
+    loop
+        loop
+            exitwhen (HaveMinimumAttackers()) //and not CaptainRetreating()
+            call Sleep( 3 )
+        endloop
+        call RemoveInjuries(  )
+        call PrepareForces(  )
+        call ProcessAttack(  )
+    endloop
+endfunction
+
+
+//===========================================================================
+
+function DebugSkillReturn takes integer skill returns string
+    if (skill == ENT_ROOTS) then
+        return "ENT_ROOTS"
+    elseif (skill == THORNS_AURA) then
+        return "THORNS_AURA"
+    elseif (skill == FORCE_NATURE) then
+        return "FORCE_NATURE"
+    elseif (skill == TRANQUILITY) then
+        return "TRANQUILITY"
+
+    elseif (skill == SEARING_ARROWS) then
+        return "SEARING_ARROWS"
+    elseif (skill == TRUESHOT) then
+        return "TRUESHOT"
+    elseif (skill == SCOUT) then
+        return "SCOUT"
+    elseif (skill == STARFALL) then
+        return "STARFALL"
+
+    elseif (skill == MANA_BURN) then
+        return "MANA_BURN"
+    elseif (skill == EVASION) then
+        return "EVASION"
+    elseif (skill == IMMOLATION) then
+        return "IMMOLATION"
+    elseif (skill == METAMORPHOSIS) then
+        return "METAMORPHOSIS"
+
+    elseif (skill == FAN_KNIVES) then
+        return "FAN_KNIVES"
+    elseif (skill == SHADOW_TOUCH) then
+        return "SHADOW_TOUCH"
+    elseif (skill == BLINK) then
+        return "BLINK"
+    elseif (skill == VENGEANCE) then
+        return "VENGEANCE"
+    endif
+
+    return "UNKNOWN"
+endfunction
+
+function CreateHeroSkill takes nothing returns nothing
+    set skill[ 1] = SEARING_ARROWS
+    set skill[ 2] = TRUESHOT
+    set skill[ 3] = SEARING_ARROWS
+    set skill[ 4] = TRUESHOT
+    set skill[ 5] = SEARING_ARROWS
+    set skill[ 6] = STARFALL
+    set skill[ 7] = TRUESHOT
+    set skill[ 8] = SCOUT
+    set skill[ 9] = SCOUT
+    set skill[10] = SCOUT
+
+    call SetSkillArray(1,MOON_CHICK)
+    call SetSkillArray(2,MOON_BABE)
+    call SetSkillArray(3,MOON_HONEY)
+
+    set skill[ 1] = FORCE_NATURE
+    set skill[ 2] = ENT_ROOTS
+    set skill[ 3] = FORCE_NATURE
+    set skill[ 4] = ENT_ROOTS
+    set skill[ 5] = FORCE_NATURE
+    set skill[ 6] = TRANQUILITY
+    set skill[ 7] = ENT_ROOTS
+    set skill[ 8] = THORNS_AURA
+    set skill[ 9] = THORNS_AURA
+    set skill[10] = THORNS_AURA
+
+    call SetSkillArray(1,KEEPER)
+
+    set skill[ 1] = ENT_ROOTS
+    set skill[ 2] = THORNS_AURA
+    set skill[ 3] = ENT_ROOTS
+    set skill[ 4] = THORNS_AURA
+    set skill[ 5] = ENT_ROOTS
+    set skill[ 6] = TRANQUILITY
+    set skill[ 7] = THORNS_AURA
+    set skill[ 8] = FORCE_NATURE
+    set skill[ 9] = FORCE_NATURE
+    set skill[10] = FORCE_NATURE
+
+    call SetSkillArray(2,KEEPER)
+    call SetSkillArray(3,KEEPER)
+
+    set skill[ 1] = MANA_BURN
+    set skill[ 2] = EVASION
+    set skill[ 3] = MANA_BURN
+    set skill[ 4] = EVASION
+    set skill[ 5] = MANA_BURN
+    set skill[ 6] = METAMORPHOSIS
+    set skill[ 7] = EVASION
+    set skill[ 8] = IMMOLATION
+    set skill[ 9] = IMMOLATION
+    set skill[10] = IMMOLATION
+
+    call SetSkillArray(1,DEMON_HUNTER)
+    call SetSkillArray(2,DEMON_HUNTER)
+    call SetSkillArray(3,DEMON_HUNTER)
+
+    set skill[ 1] = SHADOW_TOUCH
+    set skill[ 2] = FAN_KNIVES
+    set skill[ 3] = SHADOW_TOUCH
+    set skill[ 4] = FAN_KNIVES
+    set skill[ 5] = SHADOW_TOUCH
+    set skill[ 6] = VENGEANCE
+    set skill[ 7] = FAN_KNIVES
+    set skill[ 8] = BLINK
+    set skill[ 9] = BLINK
+    set skill[10] = BLINK
+
+    call SetSkillArray(1,WARDEN)
+    call SetSkillArray(2,WARDEN)
+    call SetSkillArray(3,WARDEN)
+endfunction
+
+function NewerBuildLoop takes nothing returns nothing
+    call OneBuildLoop()
+    call StaggerSleep(0.5,1)
+    loop
+        call OneBuildLoop()
+        call Sleep(0.25)
+    endloop
+endfunction
+
+function InitOptions takes nothing returns nothing
+    call SetMeleeAI(  )
+    call SetDefendPlayer( true )
+    call SetRandomPaths( true )
+    call SetTargetHeroes( true )
+    call SetPeonsRepair( true )
+    call SetHeroesFlee( true )
+    call SetHeroesBuyItems( true )
+    call SetUnitsFlee( true )
+    call SetGroupsFlee( true )
+    call SetWatchMegaTargets( true )
+    call SetIgnoreInjured( true )
+    call SetHeroesTakeItems( true )
+    call SetSlowChopping( false )
+    call SetCaptainChanges( true )
+    call SetSmartArtillery( true )
+endfunction
+
+
+function main takes nothing returns nothing
+    call InitAI()
+    call InitOptions()
+    call CreateCaptains()
+    call GenerateAIBehavior()
+    call CreateWants()
+    call SetHeroLevels(function SkillArrays)
+    call CreateHeroSkill()
+
+    call Sleep( 0.1 )
+
+    call StartThread( function WorkerAssignment )
+    call StartThread( function AttackAssignment )
+    call StartThread( function NewerBuildLoop )
+    call PlayGame()
+endfunction
+
