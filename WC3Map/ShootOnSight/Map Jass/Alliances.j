@@ -1,23 +1,11 @@
-library Map initializer InitMap
-    //We are expecting JASS3 to clean up most generic leaks when it releases.
-    //So some "leaks" are currently still present in code intentionally.
+library Alliances
     globals
         public force forcePlayers = CreateForce()
         public force forceAllies = CreateForce()
         public force forceEnemies = CreateForce()
-        private trigger start = CreateTrigger()
     endglobals
-    private function Msg takes string s returns nothing
-        local integer i = 0
-        loop
-            call DisplayTimedTextToPlayer(Player(i),0,0,5,s)
-            set i = i + 1
-            exitwhen i == bj_MAX_PLAYERS
-        endloop
-    endfunction
 
-
-    private function MakePlayerTeams takes nothing returns nothing
+    public function MakePlayerTeams takes nothing returns nothing
         call ForceAddPlayer(forcePlayers, Player(1))
         call ForceAddPlayer(forcePlayers, Player(2))
         call ForceAddPlayer(forcePlayers, Player(10))
@@ -25,10 +13,9 @@ library Map initializer InitMap
         call ForceAddPlayer(forcePlayers, Player(14))
         call ForceAddPlayer(forcePlayers, Player(21))
 
-
         call ForceAddPlayer(forceEnemies, Player(0))
-        call ForceAddPlayer(forceAllies, Player(4))
 
+        call ForceAddPlayer(forceAllies, Player(4))
     endfunction
 
     private function AssertAlliancePlayer takes player p, player p2 returns nothing
@@ -53,7 +40,7 @@ library Map initializer InitMap
         call SetPlayerAllianceStateBJ(p, p2, bj_ALLIANCE_ALLIED)
     endfunction
 
-    private function MakePlayerAlliances takes nothing returns nothing
+    public function MakePlayerAlliances takes nothing returns nothing
         local integer i = 0
         local integer j = 0
         local player p
@@ -83,7 +70,7 @@ library Map initializer InitMap
         endloop
     endfunction
 
-    private function RemoveInactivePlayers takes nothing returns nothing
+    public function RemoveInactivePlayers takes nothing returns nothing
         local integer i = 0
         local player p
             
@@ -98,25 +85,5 @@ library Map initializer InitMap
                 endif
             set i = i + 1
         endloop
-    endfunction
-
-    private function SetMapFlags takes nothing returns nothing
-        call SetMapFlag(MAP_LOCK_ALLIANCE_CHANGES, true)
-        call SetMapFlag(MAP_ALLIANCE_CHANGES_HIDDEN, true)
-        call SetMapFlag(MAP_LOCK_RESOURCE_TRADING, true)
-        call SetMapFlag(MAP_RESOURCE_TRADING_ALLIES_ONLY, true)
-    endfunction
-
-    private function Start takes nothing returns nothing
-        call MakePlayerTeams()
-        call MakePlayerAlliances()
-        call SetMapFlags()
-
-        call RemoveInactivePlayers()
-    endfunction
-
-    private function InitMap takes nothing returns nothing
-        call TriggerRegisterTimerEvent(start, 1, false)
-        call TriggerAddAction(start, function Start)
     endfunction
 endlibrary
